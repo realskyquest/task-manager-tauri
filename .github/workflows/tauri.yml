@@ -2,7 +2,6 @@ name: Release
 on:
   push:
     - main
-  workflow_dispatch:
 
 jobs:
   release:

@@ -56,7 +56,7 @@
 
 <section>
 	<article class="prose mx-auto mt-4">
-		<h1>Task Manager built with Tauri(demo)</h1>
+		<h1>Task Manager built with Tauri</h1>
 	</article>
 
 	<div class="divider mt-0"></div>

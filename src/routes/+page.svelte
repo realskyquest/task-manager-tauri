@@ -1,5 +1,13 @@
 <script lang="ts">
-    import { BaseDirectory, exists, readTextFile, writeTextFile } from '@tauri-apps/api/fs'
+	import { appLocalDataDir } from '@tauri-apps/api/path';
+	import {
+		BaseDirectory,
+		exists,
+		readTextFile,
+		writeTextFile,
+		createDir
+	} from '@tauri-apps/api/fs';
+	import { onMount } from 'svelte';
 
 	interface tasks_TYPE {
 		title: string;
@@ -11,12 +19,39 @@
 	let title: string = '';
 	let content: string = '';
 
-    async function test() {
-        const result = await exists('./saves/avatar.png', { dir: BaseDirectory.AppData });
-        console.log(result)
-    }
+	onMount(async () => {
+		const appLocalDataDirPath = await appLocalDataDir();
 
-    test()
+		const saveExists = await exists(`${appLocalDataDirPath}saves\\file.json`, {
+			dir: BaseDirectory.AppData
+		});
+		if (saveExists === true) {
+			const read = await readTextFile(`${appLocalDataDirPath}saves\\file.json`, {
+				dir: BaseDirectory.AppData
+			});
+			tasks = JSON.parse(read);
+		}
+	});
+
+	async function handleSave() {
+		const appLocalDataDirPath = await appLocalDataDir();
+
+		const fileExists = await exists(`${appLocalDataDirPath}saves`, { dir: BaseDirectory.AppData });
+
+		if (fileExists === false) {
+			await createDir(`${appLocalDataDirPath}saves`, { dir: BaseDirectory.AppData });
+		}
+
+		await writeTextFile(`${appLocalDataDirPath}saves\\file.json`, JSON.stringify(tasks), {
+			dir: BaseDirectory.AppData
+		});
+	}
+
+	$: {
+		if (tasks.length > 0) {
+			handleSave();
+		}
+	}
 </script>
 
 <section>
@@ -26,19 +61,27 @@
 
 	<div class="divider mt-0"></div>
 
-	<div
-		class="mockup-window border bg-base-300 m-4"
-		style="height: Calc(100dvh - 10rem); overflow-y: auto"
-	>
-		<div class="px-4 py-4 bg-base-200">
+	<div class="mockup-window border bg-base-300 m-4">
+		<div class="px-4 py-4 bg-base-200" style="height: Calc(100dvh - 14rem); overflow-y: auto">
 			{#key tasks}
 				{#if tasks.length > 0}
-					{#each tasks as task}
-						<div class="collapse collapse-arrow bg-base-200">
-							<input type="radio" name="my-accordion-2" />
+					{#each tasks as task, taskIndex}
+						<div class="collapse collapse-arrow bg-info mt-2 mb-2 glass">
+							<input type="checkbox" />
 							<div class="collapse-title text-xl font-medium">{task.title}</div>
-							<div class="collapse-content">
-								<pre class="border rounded-box bg-neutral-content">{task.content}</pre>
+							<div class="collapse-content bg-neutral-content">
+								<button
+									class="btn btn-error btn-sm btn-circle btn-outline btn-ghost absolute right-2 mt-1"
+									on:click={() => {
+										// Remove task from tasks
+										tasks.splice(taskIndex, 1);
+										tasks = tasks;
+
+										// Save tasks
+										handleSave();
+									}}>✕</button
+								>
+								<pre>{task.content}</pre>
 							</div>
 						</div>
 					{/each}
@@ -53,6 +96,7 @@
 	<div class="drawer-content">
 		<!-- Page content here -->
 		<label for="my-drawer" class="btn btn-primary drawer-button ml-4">Add new task</label>
+		<button class="btn btn-error" on:click={() => {tasks = []; handleSave()}}>Clear all</button>
 	</div>
 	<div class="drawer-side">
 		<label for="my-drawer" aria-label="close sidebar" class="drawer-overlay"></label>
@@ -63,8 +107,8 @@
 					sideBarOn = false;
 					tasks.push({ title: title, content: content });
 					tasks = tasks;
-                    title = '';
-                    content = '';
+					title = '';
+					content = '';
 				}}
 			>
 				<fieldset>
